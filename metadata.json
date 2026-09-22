@@ -1,0 +1,6 @@
+{
+  "name": "Snake Escape Puzzle",
+  "description": "A mobile-first tactical snake escape puzzle game with 1000 progressive handcrafted campaign levels, infinite procedural scaling, rewarded booster perks, and luxury arcade design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
