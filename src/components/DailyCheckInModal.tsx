@@ -3,7 +3,7 @@ import { X, Flame, CheckCircle2, Lock, Sparkles, AlertTriangle, Clock } from 'lu
 import confetti from 'canvas-confetti';
 import { sounds } from '../utils/audio';
 import { UserProfile } from '../types';
-import { recordDailyCheckIn } from '../services/apiService';
+import { fetchDailyCheckInStatus, recordDailyCheckIn } from '../services/apiService';
 
 export const DAILY_REWARDS: { day: number; pts: number; isMilestone?: boolean; title?: string }[] = [
   { day: 1, pts: 100 },
@@ -134,11 +134,50 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
   const [status, setStatus] = useState(() => getDailyCheckInStatus(userProfile));
   const [countdown, setCountdown] = useState<string>('');
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isLoadingRemoteStatus, setIsLoadingRemoteStatus] = useState(false);
 
   // Sync when userProfile or modal open state changes
   useEffect(() => {
     setStatus(getDailyCheckInStatus(userProfile));
   }, [userProfile?.checkinStreak, userProfile?.checkedInToday, isOpen]);
+
+  // The database is authoritative when the modal is opened, especially after app data is deleted.
+  useEffect(() => {
+    if (!isOpen || !userProfile?.isLoggedIn || !userProfile.playerId) return;
+
+    let cancelled = false;
+    setIsLoadingRemoteStatus(true);
+    fetchDailyCheckInStatus(userProfile.playerId).then((remoteStatus) => {
+      if (cancelled || !remoteStatus.success) return;
+
+      const remoteProfile: UserProfile = {
+        ...userProfile,
+        checkinStreak: remoteStatus.streak || 0,
+        checkedInToday: Boolean(remoteStatus.checkedInToday),
+        lastCheckinDate: remoteStatus.lastCheckinDate || null,
+        lastClaimTimestamp: remoteStatus.lastClaimTimestamp || null,
+      };
+
+      try {
+        localStorage.setItem(
+          DAILY_CHECKIN_STORAGE_KEY,
+          JSON.stringify({
+            currentStreak: remoteProfile.checkinStreak,
+            lastClaimTimestamp: remoteProfile.lastClaimTimestamp,
+          })
+        );
+      } catch {}
+
+      setStatus(getDailyCheckInStatus(remoteProfile));
+      setSyncStatus(null);
+    }).finally(() => {
+      if (!cancelled) setIsLoadingRemoteStatus(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userProfile?.isLoggedIn, userProfile?.playerId]);
 
   // Refresh status & live countdown
   useEffect(() => {
@@ -163,6 +202,16 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
   }, [isOpen, userProfile?.checkinStreak, userProfile?.checkedInToday]);
 
   if (!isOpen) return null;
+
+  if (isLoadingRemoteStatus) {
+    return (
+      <div id="daily-checkin-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md">
+        <div id="daily-checkin-modal-content" className="rounded-3xl border border-cyan-500/30 bg-slate-900/95 px-8 py-6 text-sm font-bold text-cyan-300 shadow-2xl">
+          Loading your check-in progress...
+        </div>
+      </div>
+    );
+  }
 
   const currentClaimDayConfig = DAILY_REWARDS.find((r) => r.day === status.nextDayToClaim) || DAILY_REWARDS[0];
 
