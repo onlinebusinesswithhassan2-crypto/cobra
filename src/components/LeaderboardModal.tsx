@@ -3,6 +3,7 @@ import { X, Trophy, RefreshCw, User, ShieldCheck, Coins, Sparkles, Calendar, Clo
 import { LeaderboardEntry, UserProfile, CbRewardTier } from '../types';
 import { fetchMonthlyLeaderboard } from '../services/apiService';
 import { sounds } from '../utils/audio';
+import { formatPoints } from '../utils/formatPoints';
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -279,7 +280,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
               <div className="text-right shrink-0">
                 <div className="text-sm font-black font-mono text-emerald-400">
-                  {currentUserMonthPts.toLocaleString()} <span className="text-[10px] font-sans">PTS</span>
+                  {formatPoints(currentUserMonthPts)} <span className="text-[10px] font-sans">PTS</span>
                 </div>
                 {userEligibleReward > 0 && (
                   <span className="text-[10px] text-amber-300 font-mono font-bold flex items-center justify-end gap-1">
@@ -392,7 +393,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
                   {/* Monthly Points */}
                   <div className="col-span-3 text-right pr-2 font-mono font-bold text-emerald-400 text-xs">
-                    {(entry.monthlyPoints || entry.totalScore).toLocaleString()}
+                    {formatPoints(entry.monthlyPoints || entry.totalScore)}
                   </div>
 
                   {/* CB Prize */}

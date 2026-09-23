@@ -991,6 +991,9 @@ export default function App() {
             handleLogout();
           }}
           onExitToGame={() => setShowAdminDashboard(false)}
+          onAdsConfigSaved={() => {
+            fetchRemoteGameConfig().then(setRemoteConfig);
+          }}
         />
       )}
 

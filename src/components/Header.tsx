@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, Settings, Lightbulb, Medal, Trophy, User, Users, ShieldCheck, Home, Sparkles, Moon, Sun } from 'lucide-react';
 import { UserProfile } from '../types';
+import { formatPoints } from '../utils/formatPoints';
 
 interface HeaderProps {
   levelNumber: number;
@@ -224,7 +225,7 @@ export const Header: React.FC<HeaderProps> = ({
           <Trophy className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <div className="flex items-baseline gap-1">
             <span className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">PTS</span>
-            <span className="font-mono text-sm text-emerald-300 font-black">{score.toLocaleString()}</span>
+            <span className="font-mono text-sm text-emerald-300 font-black">{formatPoints(score)}</span>
           </div>
         </div>
       </div>

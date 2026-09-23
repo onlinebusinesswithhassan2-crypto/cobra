@@ -95,6 +95,11 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
 
   // Comprehensive audit function
   const runSecurityAudit = useCallback(async () => {
+    if (!adsEnabled) {
+      setIsAdBlockerActive(false);
+      setLastCheckMessage(null);
+      return;
+    }
     if (isCheckingRef.current) return;
     isCheckingRef.current = true;
     setIsChecking(true);
@@ -128,10 +133,15 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
       setIsChecking(false);
       isCheckingRef.current = false;
     }
-  }, [onStatusChange]);
+  }, [adsEnabled, onStatusChange]);
 
   // Initial check & event listeners
   useEffect(() => {
+    if (!adsEnabled) {
+      setIsOnline(true);
+      setIsAdBlockerActive(false);
+      return;
+    }
     runSecurityAudit();
 
     const handleOnline = () => {
@@ -167,7 +177,11 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [runSecurityAudit, onStatusChange]);
+  }, [adsEnabled, runSecurityAudit, onStatusChange]);
+
+  if (!adsEnabled) {
+    return null;
+  }
 
   // If everything is fine, don't show blocking overlay
   if (isOnline && !isAdBlockerActive) {

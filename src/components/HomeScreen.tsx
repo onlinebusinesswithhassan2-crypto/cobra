@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Grid, Trophy, Settings, HelpCircle, ShieldCheck, User, Users, Gift, Sparkles, Heart, Infinity as InfinityIcon, ArrowRight, Award, Zap, Moon, Sun, CalendarCheck } from 'lucide-react';
 import { UserProfile } from '../types';
 import { sounds } from '../utils/audio';
+import { formatPoints } from '../utils/formatPoints';
 
 interface HomeScreenProps {
   unlockedLevel: number;
@@ -109,7 +110,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </span>
               <span className="text-slate-500">•</span>
               <span className="text-emerald-400 truncate">
-                {(Number(totalScore) || 0).toLocaleString()} pts
+                {formatPoints(totalScore)} pts
               </span>
             </div>
           </div>

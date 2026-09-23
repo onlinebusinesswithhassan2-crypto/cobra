@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Star, ArrowRight, RotateCcw, Trophy, CheckCircle2, Sparkles, Gift } from 'lucide-react';
 import { sounds } from '../utils/audio';
+import { formatPoints } from '../utils/formatPoints';
 
 interface LevelCompleteModalProps {
   levelNumber: number;
@@ -108,7 +109,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
               <Trophy className="w-4 h-4 text-amber-400" /> Total Score
             </span>
             <span className="text-emerald-400 font-mono text-lg">
-              {totalScore.toLocaleString()}
+              {formatPoints(totalScore)}
             </span>
           </div>
 

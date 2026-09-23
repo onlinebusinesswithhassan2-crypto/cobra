@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Star, Lock, Sparkles, Trophy } from 'lucide-react';
-import { getChaptersForProgress, getLevelName, TOTAL_GAME_LEVELS, ChapterInfo } from '../data/levels';
+import { getChaptersForProgress, TOTAL_GAME_LEVELS, ChapterInfo } from '../data/levels';
 
 interface LevelSelectModalProps {
   currentLevel: number;
@@ -58,10 +58,10 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
   // Fast instantaneous retrieval of the 20 levels for the active chapter (0ms latency)
   const chapterLevels = useMemo(() => {
     const [start, end] = activeChapter.range;
-    const list: { id: number; name: string }[] = [];
+    const list: number[] = [];
 
     for (let id = start; id <= end; id++) {
-      list.push({ id, name: getLevelName(id) });
+      list.push(id);
     }
 
     return list;
@@ -178,18 +178,18 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
 
         {/* 20 Levels Grid for Active Chapter */}
         <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-4 sm:grid-cols-5 gap-2.5 py-1">
-          {chapterLevels.map((level) => {
-            const isUnlocked = level.id <= unlockedLevel;
-            const isCurrent = level.id === currentLevel && !isEndlessMode;
-            const stars = levelStars[level.id] || 0;
+          {chapterLevels.map((levelId) => {
+            const isUnlocked = levelId <= unlockedLevel;
+            const isCurrent = levelId === currentLevel && !isEndlessMode;
+            const stars = levelStars[levelId] || 0;
 
             return (
               <button
-                key={level.id}
-                id={`btn-select-level-${level.id}`}
+                key={levelId}
+                id={`btn-select-level-${levelId}`}
                 disabled={!isUnlocked}
                 onClick={() => {
-                  onSelectLevel(level.id);
+                  onSelectLevel(levelId);
                   onClose();
                 }}
                 className={`relative flex flex-col items-center justify-center p-2 rounded-2xl border transition-all select-none cursor-pointer ${
@@ -203,16 +203,13 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 {isUnlocked ? (
                   <>
                     <span className={`text-base font-black font-mono ${isCurrent ? 'text-slate-950' : 'text-white'}`}>
-                      {level.id}
-                    </span>
-                    <span className={`text-[9px] max-w-full truncate px-1 text-center font-medium ${isCurrent ? 'text-slate-900/80 font-bold' : 'text-slate-400'}`}>
-                      {level.name.split(' ')[0]}
+                      {levelId}
                     </span>
                     {/* Stars Earned */}
                     <div className="flex items-center gap-0.5 mt-1">
                       {[1, 2, 3].map((s) => (
                         <Star
-                          key={`star-${level.id}-${s}`}
+                          key={`star-${levelId}-${s}`}
                           className={`w-2.5 h-2.5 ${
                             s <= stars
                               ? isCurrent
@@ -229,7 +226,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 ) : (
                   <div className="flex flex-col items-center gap-1 py-1">
                     <Lock className="w-4 h-4 text-slate-600" />
-                    <span className="text-[10px] text-slate-600 font-mono">{level.id}</span>
+                    <span className="text-[10px] text-slate-600 font-mono">{levelId}</span>
                   </div>
                 )}
               </button>

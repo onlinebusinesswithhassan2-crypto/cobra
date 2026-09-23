@@ -19,12 +19,14 @@ interface AdminDashboardProps {
   currentAdmin: UserProfile;
   onLogout: () => void;
   onExitToGame: () => void;
+  onAdsConfigSaved?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentAdmin,
   onLogout,
   onExitToGame,
+  onAdsConfigSaved,
 }) => {
   const [activeTab, setActiveTab] = useState<'players' | 'rewards' | 'monthly_archive' | 'referrals' | 'admin_security' | 'monetization'>('players');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -301,6 +303,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (res.success) {
       sounds.playBonusScore();
       setFeedbackMessage({ type: 'success', text: 'Monetization and advertising settings saved successfully!' });
+      onAdsConfigSaved?.();
     } else {
       setFeedbackMessage({ type: 'error', text: res.message || 'Failed to save monetization settings' });
     }

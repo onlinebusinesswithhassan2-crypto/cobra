@@ -1029,9 +1029,12 @@ export async function deletePlayerAccount(
 export async function adminSaveMonetizationConfig(configData: Partial<RemoteGameConfig>): Promise<{ success: boolean; message: string }> {
   // 1. Immediately update and persist into Local Cache so changes apply right now
   const prevConfig = getCachedRemoteGameConfig();
+  const normalizedConfig = configData.adsEnabled === false
+    ? { ...configData, bannerEnabled: false, interstitialEnabled: false, rewardedEnabled: false }
+    : configData;
   const updatedConfig: RemoteGameConfig = {
     ...prevConfig,
-    ...configData,
+    ...normalizedConfig,
   };
   try {
     localStorage.setItem(CACHED_CONFIG_KEY, JSON.stringify(updatedConfig));
