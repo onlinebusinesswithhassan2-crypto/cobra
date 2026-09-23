@@ -138,21 +138,17 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Central Level Title Capsule */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-2 py-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-[0.24em] text-cyan-400 font-extrabold">
-              {levelName || `Sanctuary ${Math.ceil(levelNumber / 5)}-${((levelNumber - 1) % 5) + 1}`}
-            </span>
-            {isMasterLevel && (
-              <span className="px-1.5 py-0.2 rounded bg-indigo-500/30 border border-indigo-400/40 text-[9px] font-black text-indigo-300 uppercase tracking-wider">
-                ∞ Master
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight font-display drop-shadow-[0_2px_14px_rgba(0,0,0,0.7)] flex items-center gap-1.5">
-            <span>Level {levelNumber}</span>
+        {/* Central Level Number Card */}
+        <div
+          id="puzzle-level-card"
+          className="flex-1 max-w-[150px] flex items-center justify-center px-4 py-2 rounded-2xl bg-cyan-500/12 border border-cyan-400/35 shadow-[0_0_18px_rgba(34,211,238,0.16)]"
+        >
+          <h1 className="text-base sm:text-lg font-black text-white uppercase tracking-[0.12em] font-display drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
+            Level {levelNumber}
           </h1>
+          {isMasterLevel && (
+            <span className="ml-2 text-[9px] font-black text-indigo-300 uppercase tracking-wider">∞</span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
