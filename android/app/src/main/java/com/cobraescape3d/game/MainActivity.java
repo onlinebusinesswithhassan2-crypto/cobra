@@ -1,4 +1,4 @@
-package com.snakeescape.puzzle;
+package com.cobraescape3d.game;
 
 import android.os.Build;
 import android.os.Bundle;
