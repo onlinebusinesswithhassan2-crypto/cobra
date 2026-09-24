@@ -97,6 +97,9 @@ export interface AdminPlayer {
   monthly_points: number;
   levels_cleared_monthly: number;
   highest_level: number;
+  last_checkin_date?: string | null;
+  checkin_streak?: number;
+  checked_in_today?: boolean;
   status: 'active' | 'banned';
   created_at: string;
 }

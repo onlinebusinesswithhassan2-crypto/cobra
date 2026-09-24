@@ -395,9 +395,9 @@ export async function adminGetPlayers(search: string = ''): Promise<AdminPlayer[
   } catch {}
   // Mock players fallback
   return [
-    { id: 1, player_id: 'SNK-4934', name: 'Player One', username: 'Player_One', cb_coins: 1850, monthly_points: 42500, levels_cleared_monthly: 42, highest_level: 43, status: 'active', created_at: '2026-09-01 10:00:00' },
-    { id: 2, player_id: 'SNK-7721', name: 'Viper King', username: 'ViperKing', cb_coins: 900, monthly_points: 21000, levels_cleared_monthly: 24, highest_level: 25, status: 'active', created_at: '2026-09-02 11:30:00' },
-    { id: 3, player_id: 'SNK-1001', name: 'Pro Player', username: 'ProPlayer', cb_coins: 450, monthly_points: 14200, levels_cleared_monthly: 16, highest_level: 17, status: 'active', created_at: '2026-09-03 14:15:00' },
+    { id: 1, player_id: 'SNK-4934', name: 'Player One', username: 'Player_One', cb_coins: 1850, monthly_points: 42500, levels_cleared_monthly: 42, highest_level: 43, last_checkin_date: new Date().toISOString().slice(0, 10), checkin_streak: 5, checked_in_today: true, status: 'active', created_at: '2026-09-01 10:00:00' },
+    { id: 2, player_id: 'SNK-7721', name: 'Viper King', username: 'ViperKing', cb_coins: 900, monthly_points: 21000, levels_cleared_monthly: 24, highest_level: 25, last_checkin_date: null, checkin_streak: 0, checked_in_today: false, status: 'active', created_at: '2026-09-02 11:30:00' },
+    { id: 3, player_id: 'SNK-1001', name: 'Pro Player', username: 'ProPlayer', cb_coins: 450, monthly_points: 14200, levels_cleared_monthly: 16, highest_level: 17, last_checkin_date: null, checkin_streak: 0, checked_in_today: false, status: 'active', created_at: '2026-09-03 14:15:00' },
   ];
 }
 

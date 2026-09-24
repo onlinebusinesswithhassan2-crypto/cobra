@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Trophy, Coins, Search, ShieldCheck, UserX, UserCheck, PlusCircle,
   MinusCircle, Save, LogOut, RefreshCw, X, AlertCircle, Sparkles, Sliders,
-  History, Calendar, Award, UserPlus, CheckCircle2, Menu,
+  History, Calendar, CalendarCheck, Award, UserPlus, CheckCircle2, Menu,
   Tv, Radio, DollarSign, PlaySquare, Heart, Flame, HelpCircle, Layers, Check
 } from 'lucide-react';
 import { AdminPlayer, AdminStats, CbRewardTier, UserProfile, MonthlyArchiveEntry } from '../types';
@@ -28,7 +28,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onExitToGame,
   onAdsConfigSaved,
 }) => {
-  const [activeTab, setActiveTab] = useState<'players' | 'rewards' | 'monthly_archive' | 'referrals' | 'admin_security' | 'monetization'>('players');
+  const [activeTab, setActiveTab] = useState<'players' | 'daily_checkins' | 'rewards' | 'monthly_archive' | 'referrals' | 'admin_security' | 'monetization'>('players');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [tournamentStartDate, setTournamentStartDate] = useState<string>('');
   const [tournamentEndDate, setTournamentEndDate] = useState<string>('');
@@ -309,6 +309,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const checkedInTodayPlayers = players.filter((player) => Boolean(player.checked_in_today));
+  const pendingCheckInPlayers = players.filter((player) => !Boolean(player.checked_in_today));
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col overflow-hidden select-none">
       {/* Slide-out Mobile & Tablet Sidebar Drawer */}
@@ -398,6 +401,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               type="button"
               onClick={() => {
                 sounds.playTap();
+                setActiveTab('daily_checkins');
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full px-3.5 py-3 rounded-2xl flex items-center justify-between font-bold text-xs transition-all cursor-pointer ${
+                activeTab === 'daily_checkins'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-md shadow-emerald-950/20'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeTab === 'daily_checkins' ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400'}`}>
+                  <CalendarCheck className="w-4 h-4" />
+                </div>
+                <span>Daily Check-ins</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                {checkedInTodayPlayers.length}
+              </span>
+            </button>
+
+            {/* 3. Prize Tiers & Dates */}
+            <button
+              type="button"
+              onClick={() => {
+                sounds.playTap();
                 setActiveTab('rewards');
                 setIsSidebarOpen(false);
               }}
@@ -415,7 +443,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </button>
 
-            {/* 3. Monthly Archives */}
+            {/* 4. Monthly Archives */}
             <button
               type="button"
               onClick={() => {
@@ -437,7 +465,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </button>
 
-            {/* 4. Referral Config */}
+            {/* 5. Referral Config */}
             <button
               type="button"
               onClick={() => {
@@ -459,7 +487,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </button>
 
-            {/* 5. Admin Security */}
+            {/* 6. Admin Security */}
             <button
               type="button"
               onClick={() => {
@@ -481,7 +509,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </button>
 
-            {/* 6. Monetization & Ads */}
+            {/* 7. Monetization & Ads */}
             <button
               type="button"
               onClick={() => {
@@ -755,6 +783,84 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
+          {/* TAB 2: DAILY CHECK-IN STATUS */}
+          {activeTab === 'daily_checkins' && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-black text-white">Today&apos;s Check-ins</h2>
+                  <p className="text-xs text-slate-400 mt-1">Live status from the database for all player accounts.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAll}
+                  className="p-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
+                  title="Refresh check-in status"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30">
+                  <div className="flex items-center gap-2 text-emerald-300 text-xs font-black uppercase tracking-wider">
+                    <CheckCircle2 className="w-4 h-4" /> Completed Today
+                  </div>
+                  <div className="text-3xl font-black text-white mt-2">{checkedInTodayPlayers.length}</div>
+                </div>
+                <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30">
+                  <div className="flex items-center gap-2 text-amber-300 text-xs font-black uppercase tracking-wider">
+                    <AlertCircle className="w-4 h-4" /> Not Checked In
+                  </div>
+                  <div className="text-3xl font-black text-white mt-2">{pendingCheckInPlayers.length}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-800">
+                      <tr>
+                        <th className="py-3 px-4">Player</th>
+                        <th className="py-3 px-4">Player ID</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                        <th className="py-3 px-4 text-center">Streak</th>
+                        <th className="py-3 px-4 text-right">Last Check-in</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {loading ? (
+                        <tr><td colSpan={5} className="py-10 text-center text-slate-500 font-bold">Loading check-in status...</td></tr>
+                      ) : players.length === 0 ? (
+                        <tr><td colSpan={5} className="py-10 text-center text-slate-500">No player accounts found.</td></tr>
+                      ) : (
+                        players.map((player) => {
+                          const completed = Boolean(player.checked_in_today);
+                          return (
+                            <tr key={`checkin-${player.id}`} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-white">{player.name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">@{player.username}</div>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-cyan-300">{player.player_id}</td>
+                              <td className="py-3 px-4 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${completed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+                                  {completed ? 'Completed' : 'Pending'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center font-mono font-bold text-amber-300">Day {player.checkin_streak || 0}</td>
+                              <td className="py-3 px-4 text-right font-mono text-slate-300">{player.last_checkin_date || 'Never'}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: PLAYERS DIRECTORY */}
           {activeTab === 'players' && (
             <div className="flex flex-col gap-4">

@@ -983,7 +983,7 @@ if ($action === 'admin_players') {
 
     if (!empty($query)) {
         $stmt = $pdo->prepare("
-            SELECT id, player_id, name, username, cb_coins, monthly_points, levels_cleared_monthly, highest_level, status, created_at 
+            SELECT id, player_id, name, username, cb_coins, monthly_points, levels_cleared_monthly, highest_level, last_checkin_date, checkin_streak, (last_checkin_date = CURDATE()) AS checked_in_today, status, created_at 
             FROM users 
             WHERE role = 'player'
               AND (LOWER(player_id) LIKE LOWER(?) OR LOWER(username) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?))
@@ -994,7 +994,7 @@ if ($action === 'admin_players') {
         $stmt->execute([$term, $term, $term]);
     } else {
         $stmt = $pdo->query("
-            SELECT id, player_id, name, username, cb_coins, monthly_points, levels_cleared_monthly, highest_level, status, created_at 
+            SELECT id, player_id, name, username, cb_coins, monthly_points, levels_cleared_monthly, highest_level, last_checkin_date, checkin_streak, (last_checkin_date = CURDATE()) AS checked_in_today, status, created_at 
             FROM users 
             WHERE role = 'player'
             ORDER BY id DESC 
