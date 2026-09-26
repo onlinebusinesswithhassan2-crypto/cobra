@@ -141,13 +141,14 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Central Level Number Card */}
         <div
           id="puzzle-level-card"
-          className="flex-1 max-w-[150px] flex items-center justify-center px-4 py-2 rounded-2xl bg-cyan-500/12 border border-cyan-400/35 shadow-[0_0_18px_rgba(34,211,238,0.16)]"
+          className="min-w-0 flex-1 max-w-[170px] flex items-center justify-center gap-1 px-2 sm:px-3 py-2 rounded-2xl bg-cyan-500/12 border border-cyan-400/35 shadow-[0_0_18px_rgba(34,211,238,0.16)]"
         >
-          <h1 className="text-base sm:text-lg font-black text-white uppercase tracking-[0.12em] font-display drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
-            Level {levelNumber}
+          <h1 className="min-w-0 whitespace-nowrap flex items-baseline gap-1 text-sm sm:text-lg font-black text-white uppercase tracking-[0.04em] sm:tracking-[0.12em] font-display drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
+            <span className="shrink-0">Level</span>
+            <span className="tabular-nums">{levelNumber}</span>
           </h1>
           {isMasterLevel && (
-            <span className="ml-2 text-[9px] font-black text-indigo-300 uppercase tracking-wider">∞</span>
+            <span className="shrink-0 text-[9px] font-black text-indigo-300 uppercase tracking-wider">∞</span>
           )}
         </div>
 

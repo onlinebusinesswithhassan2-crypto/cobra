@@ -584,19 +584,26 @@ if ($action === 'delete_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Cascade delete associated gameplay and social records
     try {
+        $pdo->beginTransaction();
         $pdo->prepare("DELETE FROM user_level_progress WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM user_daily_checkins WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM friendships WHERE sender_id = ? OR receiver_id = ?")->execute([$userId, $userId]);
-        $pdo->prepare("DELETE FROM referrals WHERE referrer_user_id = ? OR referred_user_id = ?")->execute([$userId, $userId]);
+        $pdo->prepare("DELETE FROM referrals WHERE referrer_id = ? OR referred_user_id = ?")->execute([$userId, $userId]);
+        $pdo->prepare("DELETE FROM referral_commissions WHERE referrer_user_id = ? OR referred_user_id = ?")->execute([$userId, $userId]);
         $pdo->prepare("DELETE FROM cb_transactions WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM monthly_tournament WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM monthly_rankings_archive WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+        $pdo->commit();
 
         echo json_encode([
             'status' => 'success',
             'message' => 'Account and all associated game progress have been permanently deleted.'
         ]);
     } catch (Exception $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         echo json_encode(['status' => 'error', 'message' => 'Database error while deleting account: ' . $e->getMessage()]);
     }
     exit();
