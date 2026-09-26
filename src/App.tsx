@@ -137,6 +137,7 @@ export default function App() {
   const [currentLevel, setCurrentLevel] = useState<LevelConfig>(() => getLevelConfig(1));
   const [snakes, setSnakes] = useState<SnakeData[]>([]);
   const [movesUsed, setMovesUsed] = useState<number>(0);
+  const movesUsedRef = useRef<number>(0);
   const [hearts, setHearts] = useState<number>(3); // 3 Lives by default (earned via rewarded ads when depleted)
 
   // Level Clear Counter for Interstitial Ad Frequency
@@ -190,6 +191,7 @@ export default function App() {
 
       setCurrentLevel(config);
       setSnakes(clonedSnakes);
+      movesUsedRef.current = 0;
       setMovesUsed(0);
       setHearts(3);
       setUndoStack([]);
@@ -215,7 +217,8 @@ export default function App() {
     ]);
 
     // 2. Increment moves used
-    const newMoves = movesUsed + 1;
+    const newMoves = movesUsedRef.current + 1;
+    movesUsedRef.current = newMoves;
     setMovesUsed(newMoves);
 
     // 3. Mark snake as removed in state
@@ -316,7 +319,8 @@ export default function App() {
 
   // Handle Snake Blocked (Collision)
   const handleSnakeBlocked = () => {
-    setMovesUsed((prev) => prev + 1);
+    movesUsedRef.current += 1;
+    setMovesUsed(movesUsedRef.current);
 
     // Hit Limits: If player has 0 hearts (default), collision immediately fails the level!
     setHearts((prev) => {
@@ -485,7 +489,8 @@ export default function App() {
           )
         );
         setUndoStack((prev) => prev.slice(0, -1));
-        setMovesUsed((prev) => Math.max(0, prev - 1));
+        movesUsedRef.current = Math.max(0, movesUsedRef.current - 1);
+        setMovesUsed(movesUsedRef.current);
       });
     }
   };

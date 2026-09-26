@@ -549,29 +549,36 @@ export function hitTestSnake(
   touchY: number,
   snakes: SnakeData[],
   padding: number,
-  cellSize: number
+  cellSize: number,
+  animatedSnakeCells: ReadonlyMap<string, readonly GridPos[]> = new Map()
 ): string | null {
-  // Test from top-most snake to bottom-most
+  let hitSnakeId: string | null = null;
+  let closestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  // Resolve overlapping touch tolerance by selecting the nearest visible body.
   for (let sIdx = snakes.length - 1; sIdx >= 0; sIdx--) {
     const snake = snakes[sIdx];
     if (snake.state === 'removed') continue;
+    const cells = animatedSnakeCells.get(snake.id) ?? snake.cells;
 
-    for (let i = 0; i < snake.cells.length; i++) {
-      const cell = snake.cells[i];
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
       const cx = padding + cell.x * cellSize + cellSize / 2;
       const cy = padding + cell.y * cellSize + cellSize / 2;
 
-      // Generous rounded hit radius
-      const hitRadius = i === 0 ? cellSize * 0.58 : cellSize * 0.48;
-      const dist = Math.hypot(touchX - cx, touchY - cy);
+      const hitRadius = i === 0 ? cellSize * 0.62 : cellSize * 0.55;
+      const dx = touchX - cx;
+      const dy = touchY - cy;
+      const distanceSquared = dx * dx + dy * dy;
 
-      if (dist <= hitRadius) {
-        return snake.id;
+      if (distanceSquared <= hitRadius * hitRadius && distanceSquared < closestDistanceSquared) {
+        hitSnakeId = snake.id;
+        closestDistanceSquared = distanceSquared;
       }
     }
   }
 
-  return null;
+  return hitSnakeId;
 }
 
 /**

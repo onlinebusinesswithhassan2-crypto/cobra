@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Direction, GridPos, Obstacle, SnakeData } from '../types';
 import {
   DIR_VECTORS,
+  calculateSlitherPositions,
   isSnakePathClear,
   calculateExitDistance,
   customEase,
@@ -60,10 +61,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [boardSize, setBoardSize] = useState({ width: 360, height: 360 });
 
-  const activeAnimRef = useRef<ActiveAnimation | null>(null);
+  const activeAnimRef = useRef<ActiveAnimation[]>([]);
   const blockedAnimRef = useRef<BlockedAnimation | null>(null);
   const escapedSnakeIdsRef = useRef<Set<string>>(new Set());
-  const isLockedRef = useRef<boolean>(false);
+  const isUndoingRef = useRef<boolean>(false);
+  const requestRenderRef = useRef<(() => void) | null>(null);
 
   // Synchronize escaped set with active snakes array
   useEffect(() => {
@@ -121,13 +123,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   useEffect(() => {
     if (registerUndoAnimation) {
       registerUndoAnimation((restoredSnake: SnakeData, onDone: () => void) => {
-        if (isLockedRef.current) return;
-        isLockedRef.current = true;
+        if (isUndoingRef.current || activeAnimRef.current.length > 0) return;
+        isUndoingRef.current = true;
         onAnimationStateChange(true);
         sounds.playUndo();
 
         const exitDist = calculateExitDistance(restoredSnake, gridWidth, gridHeight);
-        activeAnimRef.current = {
+        activeAnimRef.current.push({
           snakeId: restoredSnake.id,
           phase: 'undo_enter',
           startTime: performance.now(),
@@ -136,7 +138,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           maxExitDistance: exitDist,
           snakeData: restoredSnake,
           onComplete: onDone,
-        };
+        });
+        requestRenderRef.current?.();
       });
     }
   }, [registerUndoAnimation, gridWidth, gridHeight, onAnimationStateChange]);
@@ -144,7 +147,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   // Snake Tap Handling (Tap to escape)
   const handleSnakeTap = useCallback(
     (snakeId: string) => {
-      if (isLockedRef.current) return;
+      if (isUndoingRef.current || activeAnimRef.current.some((animation) => animation.snakeId === snakeId)) return;
 
       const snake = snakes.find((s) => s.id === snakeId);
       if (!snake || snake.state === 'removed') return;
@@ -164,30 +167,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           startTime: performance.now(),
           duration: 360,
         };
+        requestRenderRef.current?.();
         onSnakeBlocked(snake);
         return;
       }
 
       // PATH IS CLEAR: Smoothly slither out along body curve!
-      isLockedRef.current = true;
-      onAnimationStateChange(true);
-      sounds.playExit();
-
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try {
-          navigator.vibrate(25);
-        } catch {}
-      }
-
       const exitDist = calculateExitDistance(snake, gridWidth, gridHeight);
-      const duration = Math.max(700, Math.min(1150, 420 + exitDist * 130));
+      const duration = Math.max(360, Math.min(620, 280 + exitDist * 55));
 
       const head = snake.cells[0];
       const px = padding + head.x * cellSize + cellSize / 2;
       const py = padding + head.y * cellSize + cellSize / 2;
       spawnSparkles(px, py, snake.color);
 
-      activeAnimRef.current = {
+      activeAnimRef.current.push({
         snakeId: snake.id,
         phase: 'exiting',
         startTime: performance.now(),
@@ -198,7 +192,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         onComplete: () => {
           onSnakeEscape(snake);
         },
-      };
+      });
+      onAnimationStateChange(true);
+      requestRenderRef.current?.();
+
+      sounds.playExit();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+          navigator.vibrate(25);
+        } catch {}
+      }
     },
     [
       snakes,
@@ -216,7 +219,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   // Touch / Pointer Event Handler with high-precision coordinate mapping
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isLockedRef.current) return;
+    if (isUndoingRef.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -226,7 +230,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const touchX = (e.clientX - rect.left) * scaleX;
     const touchY = (e.clientY - rect.top) * scaleY;
 
-    const hitId = hitTestSnake(touchX, touchY, snakes, padding, cellSize);
+    const activeSnakePositions = new Map<string, GridPos[]>();
+    activeAnimRef.current.forEach((animation) => {
+      activeSnakePositions.set(
+        animation.snakeId,
+        animation.exitOffset > 0
+          ? calculateSlitherPositions(animation.snakeData, animation.exitOffset)
+          : animation.snakeData.cells
+      );
+    });
+    const hitId = hitTestSnake(touchX, touchY, snakes, padding, cellSize, activeSnakePositions);
     if (hitId) {
       handleSnakeTap(hitId);
     }
@@ -239,12 +252,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let reqId: number;
+    let reqId = 0;
+    let disposed = false;
+    let lastRenderTime = 0;
+
+    const requestFrame = () => {
+      if (!disposed && reqId === 0) {
+        reqId = requestAnimationFrame(render);
+      }
+    };
 
     const render = (now: number) => {
-      // 1. Advance Active Slither Animation
-      const anim = activeAnimRef.current;
-      if (anim) {
+      reqId = 0;
+      const frameScale = lastRenderTime === 0 ? 1 : Math.min(2, (now - lastRenderTime) / 16.667);
+      lastRenderTime = now;
+
+      for (let index = activeAnimRef.current.length - 1; index >= 0; index--) {
+        const anim = activeAnimRef.current[index];
         const elapsed = now - anim.startTime;
 
         if (anim.phase === 'exiting') {
@@ -253,12 +277,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           anim.exitOffset = eased * anim.maxExitDistance;
 
           if (t >= 1) {
-            const finishedId = anim.snakeId;
-            escapedSnakeIdsRef.current.add(finishedId);
-            activeAnimRef.current = null;
-            isLockedRef.current = false;
-            onAnimationStateChange(false);
+            escapedSnakeIdsRef.current.add(anim.snakeId);
+            activeAnimRef.current.splice(index, 1);
             anim.onComplete();
+            onAnimationStateChange(activeAnimRef.current.length > 0);
           }
         } else if (anim.phase === 'undo_enter') {
           const t = Math.min(1, elapsed / anim.duration);
@@ -267,10 +289,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
           if (t >= 1) {
             escapedSnakeIdsRef.current.delete(anim.snakeId);
-            activeAnimRef.current = null;
-            isLockedRef.current = false;
-            onAnimationStateChange(false);
+            activeAnimRef.current.splice(index, 1);
+            isUndoingRef.current = false;
             anim.onComplete();
+            onAnimationStateChange(activeAnimRef.current.length > 0);
           }
         }
       }
@@ -308,8 +330,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       // 6. Draw All Active Snakes (Exclude any removed or escaped snakes)
       snakes.forEach((snake) => {
-        const isAnim = activeAnimRef.current?.snakeId === snake.id;
-        const currentExitOffset = isAnim ? activeAnimRef.current!.exitOffset : 0;
+        const activeAnimation = activeAnimRef.current.find((animation) => animation.snakeId === snake.id);
+        const isAnim = activeAnimation !== undefined;
+        const currentExitOffset = activeAnimation?.exitOffset ?? 0;
 
         if (snake.state === 'removed' && !isAnim) return;
         if (escapedSnakeIdsRef.current.has(snake.id) && !isAnim) return;
@@ -330,11 +353,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       if (particlesRef.current.length > 0) {
         for (let i = particlesRef.current.length - 1; i >= 0; i--) {
           const p = particlesRef.current[i];
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.08;
-          p.alpha -= 0.024;
-          p.rotation += 0.05;
+          p.x += p.vx * frameScale;
+          p.y += p.vy * frameScale;
+          p.vy += 0.08 * frameScale;
+          p.alpha -= 0.024 * frameScale;
+          p.rotation += 0.05 * frameScale;
 
           if (p.alpha <= 0) {
             particlesRef.current.splice(i, 1);
@@ -343,11 +366,23 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         drawParticles(ctx, particlesRef.current);
       }
 
-      reqId = requestAnimationFrame(render);
+      if (
+        activeAnimRef.current.length > 0 ||
+        blockedAnimRef.current !== null ||
+        particlesRef.current.length > 0 ||
+        hintedSnakeId !== null
+      ) {
+        requestFrame();
+      }
     };
 
-    reqId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(reqId);
+    requestRenderRef.current = requestFrame;
+    requestFrame();
+    return () => {
+      disposed = true;
+      if (reqId !== 0) cancelAnimationFrame(reqId);
+      if (requestRenderRef.current === requestFrame) requestRenderRef.current = null;
+    };
   }, [
     snakes,
     obstacles,
