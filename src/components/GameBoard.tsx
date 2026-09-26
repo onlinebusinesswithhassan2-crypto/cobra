@@ -102,6 +102,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const padding = 20;
   const boardInnerSize = Math.max(100, boardSize.width - padding * 2);
   const cellSize = boardInnerSize / Math.max(gridWidth, gridHeight);
+  const horizontalGridOffset = Math.max(0, (boardInnerSize - gridWidth * cellSize) / 2);
 
   // Spawn sparkle particles when a snake escapes
   const spawnSparkles = useCallback((x: number, y: number, color: string) => {
@@ -250,7 +251,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           : animation.snakeData.cells
       );
     });
-    const hitId = hitTestSnake(touchX, touchY, logicalSnakesRef.current, padding, cellSize, activeSnakePositions);
+    const hitId = hitTestSnake(
+      touchX - horizontalGridOffset,
+      touchY,
+      logicalSnakesRef.current,
+      padding,
+      cellSize,
+      activeSnakePositions
+    );
     if (hitId) {
       handleSnakeTap(hitId);
     }
@@ -330,6 +338,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       // 3. Clear Canvas Screen
       ctx.clearRect(0, 0, boardSize.width, boardSize.height);
+      ctx.save();
+      ctx.translate(horizontalGridOffset, 0);
 
       // 4. Draw Beveled Grid Cells
       drawGridCells(ctx, gridWidth, gridHeight, padding, cellSize);
@@ -376,6 +386,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         }
         drawParticles(ctx, particlesRef.current);
       }
+      ctx.restore();
 
       if (
         activeAnimRef.current.length > 0 ||
@@ -402,6 +413,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     boardSize,
     cellSize,
     padding,
+    horizontalGridOffset,
     hintedSnakeId,
     onAnimationStateChange,
   ]);
