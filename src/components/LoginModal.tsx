@@ -79,7 +79,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setErrorMessage(res.message || 'Login failed. Check your credentials.');
       }
     } catch {
-      setErrorMessage('Unable to connect to server. Try again.');
+      setErrorMessage('Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setErrorMessage(res.message || 'Registration failed.');
       }
     } catch {
-      setErrorMessage('Unable to reach server. Try again.');
+      setErrorMessage('Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }

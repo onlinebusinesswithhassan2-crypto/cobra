@@ -48,6 +48,27 @@ export const setApiBaseUrl = (url: string) => {
 
 export const getApiBaseUrl = () => API_BASE_URL;
 
+export async function verifyBackendConnectivity(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(getEndpointUrl('get_config', { _t: `${Date.now()}` }), {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.status === 'success' && !!data.config && typeof data.config === 'object';
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function getEndpointUrl(action: string, extraParams: Record<string, string> = {}): string {
   const base = (API_BASE_URL || DEFAULT_PRODUCTION_API_URL).trim().replace(/\/+$/, '');
   const query = new URLSearchParams({ action, ...extraParams }).toString();
@@ -123,23 +144,9 @@ export async function registerPlayer(
       };
       return { success: true, profile, message: data.message };
     }
-    return { success: false, message: data.message || 'Registration failed' };
-  } catch (err: any) {
-    // Offline fallback registration
-    const newPlayerId = 'SNK-' + Math.floor(1000 + Math.random() * 9000);
-    const mockProfile: UserProfile = {
-      playerId: newPlayerId,
-      name: cleanName,
-      username: cleanUsername,
-      role: 'player',
-      isLoggedIn: true,
-      cbCoins: 0,
-      monthlyPoints: 0,
-      totalScore: 0,
-      levelsCleared: 0,
-      status: 'active',
-    };
-    return { success: true, profile: mockProfile, message: 'Offline account created successfully!' };
+          return { success: false, message: 'Please check your internet connection and try again.' };
+  } catch {
+    return { success: false, message: 'Please check your internet connection and try again.' };
   }
 }
 
@@ -199,30 +206,17 @@ export async function loginPlayer(
       };
       return { success: true, profile };
     }
-    return { success: false, message: data.message || 'Invalid credentials' };
-  } catch (err: any) {
-    // Demo admin check for offline test
-    if ((loginIdentifier.toLowerCase() === 'admin' || loginIdentifier.toUpperCase() === 'ADM-0001') && password === 'admin123456') {
-      const adminProfile: UserProfile = {
-        playerId: 'ADM-0001',
-        name: 'Master Admin',
-        username: 'admin',
-        role: 'admin',
-        isLoggedIn: true,
-        cbCoins: 99999,
-        monthlyPoints: 0,
-        totalScore: 0,
-        levelsCleared: 0,
-        status: 'active',
-      };
-      return { success: true, profile: adminProfile };
-    }
-
-    console.error('Server login error:', err);
+    const safeAuthErrors = new Set([
+      'Incorrect Password',
+      'Account not found with this Username or Player ID',
+      'This account has been banned by Administrator',
+    ]);
     return {
       success: false,
-      message: `Database server connection failed (${err?.message || 'HTTP 500 / Network Error'}). Please upload the fixed server_api/index.php to Hostinger.`
+            message: 'Please check your internet connection and try again.',
     };
+  } catch {
+    return { success: false, message: 'Please check your internet connection and try again.' };
   }
 }
 

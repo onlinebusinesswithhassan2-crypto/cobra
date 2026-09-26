@@ -23,20 +23,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 header('Content-Type: application/json; charset=utf-8');
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ob_start();
 
 // Ensure clean JSON errors instead of unhandled HTTP 500 crashes
 set_exception_handler(function($e) {
-    http_response_code(200);
-    echo json_encode(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()]);
+    error_log((string)$e);
+    http_response_code(500);
+    if (ob_get_level() > 0) ob_clean();
+    echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
     exit();
 });
 
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        http_response_code(200);
+        error_log(sprintf('PHP fatal error: %s in %s on line %d', $error['message'], $error['file'], $error['line']));
+        http_response_code(500);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['status' => 'error', 'message' => 'PHP fatal error: ' . $error['message'] . ' on line ' . $error['line']]);
+        if (ob_get_level() > 0) ob_clean();
+        echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
         exit();
     }
 });
@@ -55,7 +62,9 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Database connection failed: ' . $e->getMessage()]);
+    error_log((string)$e);
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
     exit();
 }
 
@@ -604,7 +613,9 @@ if ($action === 'delete_account' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($pdo) && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo json_encode(['status' => 'error', 'message' => 'Database error while deleting account: ' . $e->getMessage()]);
+        error_log((string)$e);
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
     }
     exit();
 }
@@ -1238,9 +1249,11 @@ if ($action === 'admin_save_monetization' && $_SERVER['REQUEST_METHOD'] === 'POS
         ]);
         exit();
     } catch (Throwable $e) {
+        error_log((string)$e);
+        http_response_code(500);
         echo json_encode([
             'status' => 'error',
-            'message' => 'Server database error: ' . $e->getMessage()
+            'message' => 'Please check your internet connection and try again.'
         ]);
         exit();
     }
@@ -1671,7 +1684,9 @@ if ($action === 'send_cb_gift' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo json_encode(['status' => 'error', 'message' => 'Transaction failed: ' . $e->getMessage()]);
+        error_log((string)$e);
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
         exit();
     }
 }
@@ -1907,7 +1922,9 @@ if ($action === 'claim_referral_reward' && $_SERVER['REQUEST_METHOD'] === 'POST'
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        echo json_encode(['status' => 'error', 'message' => 'Claim failed: ' . $e->getMessage()]);
+        error_log((string)$e);
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Please check your internet connection and try again.']);
         exit();
     }
 }

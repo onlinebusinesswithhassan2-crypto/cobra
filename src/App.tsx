@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { SnakeData, LevelConfig, MoveRecord, UserProgress, UserProfile, RemoteGameConfig } from './types';
 import { LEVELS, LEVEL_MAP, getLevelConfig } from './data/levels';
 import { findFirstClearSnake } from './utils/gameLogic';
@@ -169,6 +171,58 @@ export default function App() {
 
   // Daily Check-In Modal State
   const [showDailyCheckIn, setShowDailyCheckIn] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let mounted = true;
+    let removeListener: (() => Promise<void>) | undefined;
+    CapacitorApp.addListener('backButton', () => {
+      if (showAdminDashboard) return setShowAdminDashboard(false);
+      if (showRewardedAd) return setShowRewardedAd(false);
+      if (showInterstitialAd) return setShowInterstitialAd(false);
+      if (showLevelComplete) return setShowLevelComplete(false);
+      if (showLevelFailed) return setShowLevelFailed(false);
+      if (showLevelSelect) return setShowLevelSelect(false);
+      if (showLoginModal) return setShowLoginModal(false);
+      if (showSettings) return setShowSettings(false);
+      if (showRulesGuide) return setShowRulesGuide(false);
+      if (showLeaderboardModal) return setShowLeaderboardModal(false);
+      if (showFriendsModal) return setShowFriendsModal(false);
+      if (showReferralModal) return setShowReferralModal(false);
+      if (showDailyCheckIn) return setShowDailyCheckIn(false);
+      if (showPrivacyPolicy) return setShowPrivacyPolicy(false);
+      if (currentScreen === 'game') return setCurrentScreen('home');
+      void CapacitorApp.exitApp();
+    }).then((listener) => {
+      if (mounted) {
+        removeListener = () => listener.remove();
+      } else {
+        void listener.remove();
+      }
+    }).catch(() => {});
+
+    return () => {
+      mounted = false;
+      void removeListener?.();
+    };
+  }, [
+    currentScreen,
+    showAdminDashboard,
+    showRewardedAd,
+    showInterstitialAd,
+    showLevelComplete,
+    showLevelFailed,
+    showLevelSelect,
+    showLoginModal,
+    showSettings,
+    showRulesGuide,
+    showLeaderboardModal,
+    showFriendsModal,
+    showReferralModal,
+    showDailyCheckIn,
+    showPrivacyPolicy,
+  ]);
 
   // Initialize a level (caches configuration so restart retains the exact same puzzle)
   const loadLevel = useCallback(
@@ -757,6 +811,11 @@ export default function App() {
               obstacles={currentLevel.obstacles}
               hintedSnakeId={hintedSnakeId}
               onSnakeEscape={handleSnakeEscape}
+              onSnakeMoveStarted={(snakeId) => {
+                setSnakes((prev) => prev.map((snake) =>
+                  snake.id === snakeId ? { ...snake, state: 'removed' } : snake
+                ));
+              }}
               onSnakeBlocked={handleSnakeBlocked}
               onAnimationStateChange={setIsAnimating}
               registerUndoAnimation={(handler) => {

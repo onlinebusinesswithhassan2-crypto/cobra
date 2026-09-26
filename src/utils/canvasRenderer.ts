@@ -558,8 +558,9 @@ export function hitTestSnake(
   // Resolve overlapping touch tolerance by selecting the nearest visible body.
   for (let sIdx = snakes.length - 1; sIdx >= 0; sIdx--) {
     const snake = snakes[sIdx];
-    if (snake.state === 'removed') continue;
-    const cells = animatedSnakeCells.get(snake.id) ?? snake.cells;
+    const animatedCells = animatedSnakeCells.get(snake.id);
+    if (snake.state === 'removed' && !animatedCells) continue;
+    const cells = animatedCells ?? snake.cells;
 
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i];

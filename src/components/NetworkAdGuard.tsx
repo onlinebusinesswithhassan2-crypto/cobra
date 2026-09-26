@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WifiOff, ShieldAlert, RefreshCw, ShieldCheck, AlertCircle } from 'lucide-react';
+import { verifyBackendConnectivity } from '../services/apiService';
 
 interface NetworkAdGuardProps {
   onStatusChange?: (status: { isOnline: boolean; isAdBlockerActive: boolean }) => void;
@@ -7,7 +8,7 @@ interface NetworkAdGuardProps {
 }
 
 export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, adsEnabled = true }) => {
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState<boolean>(false);
   const [isAdBlockerActive, setIsAdBlockerActive] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [lastCheckMessage, setLastCheckMessage] = useState<string | null>(null);
@@ -86,20 +87,11 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
 
   // Helper to verify genuine online connectivity
   const verifyOnlineConnection = async (): Promise<boolean> => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return false;
-    }
-    // Trust navigator.onLine as reliable source
-    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+    return verifyBackendConnectivity();
   };
 
   // Comprehensive audit function
   const runSecurityAudit = useCallback(async () => {
-    if (!adsEnabled) {
-      setIsAdBlockerActive(false);
-      setLastCheckMessage(null);
-      return;
-    }
     if (isCheckingRef.current) return;
     isCheckingRef.current = true;
     setIsChecking(true);
@@ -110,9 +102,15 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
       setIsOnline(onlineStatus);
 
       if (!onlineStatus) {
-        // If there's no internet, we cannot reliably detect ad blocker, so just block with Offline screen
         setIsAdBlockerActive(false);
         onStatusChange?.({ isOnline: false, isAdBlockerActive: false });
+        return;
+      }
+
+      if (!adsEnabled) {
+        setIsAdBlockerActive(false);
+        setLastCheckMessage(null);
+        onStatusChange?.({ isOnline: true, isAdBlockerActive: false });
         return;
       }
 
@@ -126,9 +124,9 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
         setLastCheckMessage(null);
       }
     } catch {
-      // Fallback to navigator online
-      const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-      setIsOnline(online);
+      setIsOnline(false);
+      setIsAdBlockerActive(false);
+      onStatusChange?.({ isOnline: false, isAdBlockerActive: false });
     } finally {
       setIsChecking(false);
       isCheckingRef.current = false;
@@ -137,15 +135,9 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
 
   // Initial check & event listeners
   useEffect(() => {
-    if (!adsEnabled) {
-      setIsOnline(true);
-      setIsAdBlockerActive(false);
-      return;
-    }
     runSecurityAudit();
 
     const handleOnline = () => {
-      setIsOnline(true);
       runSecurityAudit();
     };
 
@@ -179,12 +171,8 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
     };
   }, [adsEnabled, runSecurityAudit, onStatusChange]);
 
-  if (!adsEnabled) {
-    return null;
-  }
-
   // If everything is fine, don't show blocking overlay
-  if (isOnline && !isAdBlockerActive) {
+  if (isOnline && (!adsEnabled || !isAdBlockerActive)) {
     return null;
   }
 
@@ -223,15 +211,8 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
               <span>Offline Mode Not Allowed</span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1 font-display">
-              No Internet Connection
-            </h2>
-            <p className="text-sm font-semibold text-rose-300/90 mb-3">
-              Active internet connection required to play
-            </p>
-
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-xs">
-              Snake Escape requires an active internet connection to load puzzles, synchronize leaderboards, and function properly. Please turn on Wi-Fi or Mobile Data to continue.
+            <p className="text-sm sm:text-base font-semibold text-rose-200 leading-relaxed mb-6 max-w-xs" role="alert">
+              Internet connection is required to play. Please check your internet connection and try again.
             </p>
 
             <div className="w-full bg-slate-800/60 rounded-2xl p-3 mb-6 border border-white/5 text-left text-xs text-slate-300 flex flex-col gap-2">
@@ -252,7 +233,7 @@ export const NetworkAdGuard: React.FC<NetworkAdGuardProps> = ({ onStatusChange, 
               className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-rose-500/30 flex items-center justify-center gap-2.5 active:scale-95 transition-all cursor-pointer disabled:opacity-60"
             >
               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} />
-              <span>{isChecking ? 'Checking Connection...' : 'Retry Connection'}</span>
+              <span>{isChecking ? 'Checking Connection...' : 'Retry'}</span>
             </button>
           </>
         ) : (

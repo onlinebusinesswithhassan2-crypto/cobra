@@ -67,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            $msg = 'Database connection error: ' . htmlspecialchars($e->getMessage());
+            error_log((string)$e);
+            $msg = 'Please check your internet connection and try again.';
             $msgType = 'error';
         }
     }

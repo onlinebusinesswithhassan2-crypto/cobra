@@ -24,6 +24,7 @@ interface GameBoardProps {
   obstacles?: Obstacle[];
   hintedSnakeId: string | null;
   onSnakeEscape: (snake: SnakeData) => void;
+  onSnakeMoveStarted: (snakeId: string) => void;
   onSnakeBlocked: (snake: SnakeData) => void;
   onAnimationStateChange: (isAnimating: boolean) => void;
   registerUndoAnimation?: (handler: (snake: SnakeData, onDone: () => void) => void) => void;
@@ -53,6 +54,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   obstacles = [],
   hintedSnakeId,
   onSnakeEscape,
+  onSnakeMoveStarted,
   onSnakeBlocked,
   onAnimationStateChange,
   registerUndoAnimation,
@@ -64,11 +66,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const activeAnimRef = useRef<ActiveAnimation[]>([]);
   const blockedAnimRef = useRef<BlockedAnimation | null>(null);
   const escapedSnakeIdsRef = useRef<Set<string>>(new Set());
+  const logicalSnakesRef = useRef(snakes);
   const isUndoingRef = useRef<boolean>(false);
   const requestRenderRef = useRef<(() => void) | null>(null);
 
   // Synchronize escaped set with active snakes array
   useEffect(() => {
+    logicalSnakesRef.current = snakes;
     escapedSnakeIdsRef.current.clear();
   }, [snakes]);
 
@@ -149,11 +153,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     (snakeId: string) => {
       if (isUndoingRef.current || activeAnimRef.current.some((animation) => animation.snakeId === snakeId)) return;
 
-      const snake = snakes.find((s) => s.id === snakeId);
+      const currentSnakes = logicalSnakesRef.current;
+      const snake = currentSnakes.find((s) => s.id === snakeId);
       if (!snake || snake.state === 'removed') return;
 
       // Check complete path clearance before movement
-      const { isClear } = isSnakePathClear(snake, snakes, obstacles, gridWidth, gridHeight);
+      const { isClear } = isSnakePathClear(snake, currentSnakes, obstacles, gridWidth, gridHeight);
 
       if (!isClear) {
         sounds.playBlocked();
@@ -175,6 +180,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       // PATH IS CLEAR: Smoothly slither out along body curve!
       const exitDist = calculateExitDistance(snake, gridWidth, gridHeight);
       const duration = Math.max(360, Math.min(620, 280 + exitDist * 55));
+
+      logicalSnakesRef.current = currentSnakes.map((current) =>
+        current.id === snake.id ? { ...current, state: 'removed' } : current
+      );
+      onSnakeMoveStarted(snake.id);
 
       const head = snake.cells[0];
       const px = padding + head.x * cellSize + cellSize / 2;
@@ -211,6 +221,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       onAnimationStateChange,
       onSnakeBlocked,
       onSnakeEscape,
+      onSnakeMoveStarted,
       spawnSparkles,
       cellSize,
       padding,
@@ -239,7 +250,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           : animation.snakeData.cells
       );
     });
-    const hitId = hitTestSnake(touchX, touchY, snakes, padding, cellSize, activeSnakePositions);
+    const hitId = hitTestSnake(touchX, touchY, logicalSnakesRef.current, padding, cellSize, activeSnakePositions);
     if (hitId) {
       handleSnakeTap(hitId);
     }
